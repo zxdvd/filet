@@ -3,3 +3,4 @@
 *.sqlite3*
 *.lockfile
 .DS_Store
+__pycache__/

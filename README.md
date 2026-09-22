@@ -4,6 +4,12 @@ Local file automation you can inspect before it runs. Simple rules use YAML; com
 
 **Status: experimental 0.1.** This implements the CLI-first MVP from [the architecture review](docs/architecture-review-v0.2.md). It is intended for testing on disposable files before enabling real workflows. There is no GUI, Node.js runtime dependency, OCR, cloud model integration, or universal undo.
 
+**macOS:** follow the [installation and launchd guide (中文)](skills/filet/references/macos.md) to build, validate a workflow, and run at login. `filet daemon` is a foreground process; launchd provides background supervision.
+
+**Agent setup:** the repository includes a portable [Filet skill](skills/filet/SKILL.md) covering YAML, JavaScript, plan validation, operation, and recovery. Ask your local agent to read that file, or copy the entire `skills/filet` folder into the skill directory supported by your agent. The reference files and plist generator travel with it. For example:
+
+> Read `skills/filet/SKILL.md` in this checkout. Install Filet on my Mac, verify a disposable PDF archive workflow, and configure it to run at login. Use `~/.config/filet/filet.yaml` and `~/Library/Application Support/filet/state`. Report the final rules, validation results, and service status.
+
 ## Build
 
 Install Rust and a native C toolchain (GCC/Clang on Linux/macOS, MSVC on Windows):
@@ -150,5 +156,7 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets --locked -- -D warnings
 cargo test --workspace --locked
 ```
+
+The macOS plist helper uses Python 3's standard library. Run `python3 -m unittest discover -s tests -p 'test_*.py'` to verify path escaping and validation without installing a service; macOS also validates the generated file with native `plutil`.
 
 See [validation evidence and remaining release gates](docs/validation.md), [operations](docs/operations.md), and [architecture](docs/architecture-review-v0.2.md). This repository does not select an open-source license on the author's behalf.

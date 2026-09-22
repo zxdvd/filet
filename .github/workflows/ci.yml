@@ -28,6 +28,9 @@ jobs:
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Native tests
         run: cargo test --workspace --locked
+      - name: LaunchAgent helper
+        if: runner.os != 'Windows'
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
       - name: CLI examples
         shell: bash
         run: |
