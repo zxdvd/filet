@@ -4,7 +4,7 @@ Local file automation you can inspect before it runs. Simple rules use YAML; com
 
 **Status: experimental 0.1.** This implements the CLI-first MVP from [the architecture review](docs/architecture-review-v0.2.md). It is intended for testing on disposable files before enabling real workflows. There is no GUI, Node.js runtime dependency, OCR, cloud model integration, or universal undo.
 
-**Download:** [automatic CI builds](https://github.com/zxdvd/filet/actions/workflows/release.yml) provide macOS Apple Silicon/Intel, Linux x64, and Windows x64 packages with the binary, skill, and examples. See [download and installation instructions](docs/artifacts.md). Rust is only required to build from source.
+**Download:** [GitHub Releases](https://github.com/zxdvd/filet/releases/latest) provide macOS Apple Silicon, Linux x64, and Windows x64 packages with the binary, skill, and examples. Release attachments have no automatic expiry. [Development builds](https://github.com/zxdvd/filet/actions/workflows/release.yml) are also available. See [download and installation instructions](docs/artifacts.md). Rust is only required to build from source.
 
 **macOS:** follow the [installation and launchd guide (中文)](skills/filet/references/macos.md) to install, validate a workflow, and run at login. `filet daemon` is a foreground process; launchd provides background supervision.
 
@@ -22,7 +22,7 @@ cargo test --workspace --locked
 cargo install --locked --path crates/filet-cli
 ```
 
-Rust is pinned in `rust-toolchain.toml`; Rust dependencies are pinned in `Cargo.lock`. QuickJS and SQLite are compiled into the application. Ordinary CI runs native tests on Ubuntu 24.04 x64, macOS 14 arm64, and Windows Server 2022 x64. The artifact workflow additionally tests optimized builds on macOS 15 Intel. Every `main` push and `v*` tag automatically builds downloadable packages; manual runs are also available. Packages include checksums and source revision metadata and are retained for 30 days. Inspect the build's native results before using a particular revision.
+Rust is pinned in `rust-toolchain.toml`; Rust dependencies are pinned in `Cargo.lock`. QuickJS and SQLite are compiled into the application. Ordinary CI runs native tests on Ubuntu 24.04 x64, macOS 14 arm64, and Windows Server 2022 x64. The artifact workflow also tests optimized builds on these three platforms. Every `main` push and `v*` tag automatically builds downloadable packages; manual runs are also available. Packages include checksums and source revision metadata. Actions artifacts are retained for 30 days; published Release attachments are retained until deleted. See [publication instructions](docs/artifacts.md#publishing-a-release). Inspect the build's native results before using a particular revision.
 
 ## Quick start
 

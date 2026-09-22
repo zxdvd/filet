@@ -16,7 +16,6 @@ import zipfile
 TARGETS = {
     "x86_64-unknown-linux-gnu": "filet-linux-x64",
     "aarch64-apple-darwin": "filet-macos-arm64",
-    "x86_64-apple-darwin": "filet-macos-x64",
     "x86_64-pc-windows-msvc": "filet-windows-x64",
 }
 RESOURCES = ("README.md", "docs", "examples", "schemas", "types", "skills/filet")

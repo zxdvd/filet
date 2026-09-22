@@ -4,13 +4,52 @@ on:
     branches: [main]
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the Cargo version as a GitHub Release (main or version tag only)
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
   group: artifacts-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate release request
+        id: release
+        env:
+          PUBLISH: ${{ inputs.publish || false }}
+        run: |
+          python - <<'PY'
+          import json, os, pathlib, tomllib
+          event = json.loads(pathlib.Path(os.environ['GITHUB_EVENT_PATH']).read_text())
+          ref = os.environ['GITHUB_REF']
+          version = tomllib.loads(pathlib.Path('Cargo.toml').read_text())['workspace']['package']['version']
+          tag = 'v' + version
+          message = (event.get('head_commit') or {}).get('message', '').split('\n', 1)[0]
+          requested = ref.startswith('refs/tags/') or os.environ['PUBLISH'] == 'true'
+          requested |= ref == 'refs/heads/main' and message.startswith('release: v')
+          if requested:
+              if ref not in ('refs/heads/main', 'refs/tags/' + tag):
+                  raise SystemExit('Release ref must be main or the tag matching Cargo.toml')
+              if message.startswith('release: v') and message != 'release: ' + tag:
+                  raise SystemExit('Release commit title must match Cargo.toml')
+              if not pathlib.Path('docs/releases', tag + '.md').is_file():
+                  raise SystemExit('Missing versioned release notes')
+              with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+                  print('tag=' + tag, file=output)
+          PY
   build:
+    needs: prepare
     name: ${{ matrix.artifact }}
     timeout-minutes: 45
     strategy:
@@ -24,10 +63,6 @@ jobs:
           - os: macos-14
             artifact: filet-macos-arm64
             target: aarch64-apple-darwin
-            binary: filet
-          - os: macos-15-intel
-            artifact: filet-macos-x64
-            target: x86_64-apple-darwin
             binary: filet
           - os: windows-2022
             artifact: filet-windows-x64
@@ -85,3 +120,43 @@ jobs:
         run: |
           printf '### %s\n\n[Download package](%s) — commit `%s`\n' \
             "$ARTIFACT_NAME" "$ARTIFACT_URL" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+  publish:
+    name: Publish GitHub Release
+    needs: [prepare, build]
+    if: needs.prepare.outputs.tag != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: filet-*
+          path: artifacts
+      - name: Verify and assemble all release assets
+        env:
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+        run: >-
+          python scripts/assemble_release.py
+          --artifacts artifacts --output-dir release-assets
+          --tag "$RELEASE_TAG" --revision "$GITHUB_SHA"
+      - name: Publish packages and checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.prepare.outputs.tag }}
+        run: |
+          if git rev-parse --verify "refs/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            test "$(git rev-list -n 1 "refs/tags/$RELEASE_TAG")" = "$GITHUB_SHA"
+          fi
+          gh release create "$RELEASE_TAG" release-assets/* \
+            --target "$GITHUB_SHA" --title "Filet $RELEASE_TAG" \
+            --notes-file "docs/releases/$RELEASE_TAG.md" --latest
+          printf '[Download %s](https://github.com/%s/releases/tag/%s)\n' \
+            "$RELEASE_TAG" "$GH_REPO" "$RELEASE_TAG" >> "$GITHUB_STEP_SUMMARY"

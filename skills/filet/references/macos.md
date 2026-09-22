@@ -2,14 +2,14 @@
 
 目录：[安装](#1-安装) · [首次验证](#2-建立独立的示例配置) · [后台运行](#4-登录后自动运行) · [日常管理](#5-日常管理) · [排错](#6-常见问题)
 
-Filet 自带前台 `daemon`，负责监听、稳定性检查、补扫、计划执行和规则热加载。使用用户级 LaunchAgent 可让它在登录后启动、退出后重新拉起；注销后不会继续运行。不需要 root 或 `sudo`。这是实验版，提供 Apple Silicon 和 Intel 的 CI 预编译包，也可以从源码安装；仓库没有 Homebrew formula。
+Filet 自带前台 `daemon`，负责监听、稳定性检查、补扫、计划执行和规则热加载。使用用户级 LaunchAgent 可让它在登录后启动、退出后重新拉起；注销后不会继续运行。不需要 root 或 `sudo`。这是实验版，提供 Apple Silicon 的 Release 预编译包，也可以从源码安装；仓库没有 Homebrew formula。
 
 ## 1. 安装
 
-**优先使用预编译包：** 打开 [Build artifacts](https://github.com/zxdvd/filet/actions/workflows/release.yml)，选择成功构建，在 **Artifacts** 下载 `filet-macos-arm64`（Apple Silicon）或 `filet-macos-x64`（Intel）。需要登录 GitHub。解开下载的外层 ZIP 后，检查 `SHA256SUMS`，再解开内部 tar.gz。以 Apple Silicon 为例，在下载解压后的目录运行：
+**优先使用预编译包：** 打开 [最新 Release](https://github.com/zxdvd/filet/releases/latest)，在 **Assets** 下载 `filet-macos-arm64.tar.gz` 和 `SHA256SUMS`，放在同一目录。无需登录 GitHub，Release 附件不会因 Actions 的 30 天保留期而过期。不再提供 Intel Mac 包。在下载目录运行：
 
 ```sh
-shasum -a 256 -c SHA256SUMS
+grep '  filet-macos-arm64.tar.gz$' SHA256SUMS | shasum -a 256 -c -
 tar -xzf filet-macos-arm64.tar.gz
 mkdir -p "$HOME/.local/bin"
 install -m 755 filet-macos-arm64/filet "$HOME/.local/bin/filet"
@@ -17,7 +17,7 @@ export PATH="$HOME/.local/bin:$PATH"
 filet --version
 ```
 
-Intel 使用 `filet-macos-x64` 替换上述文件名和目录名。按需将 PATH 设置加入 shell 启动文件。保留解压目录里的 `skills/filet` 供 Agent 使用。二进制不需要 Rust/Node.js；launchd 生成器需要 Python 3。CI 包尚无 Apple Developer ID 签名或公证。可查看[完整下载说明](https://github.com/zxdvd/filet/blob/main/docs/artifacts.md)，然后从本指南第 2 节继续。
+按需将 PATH 设置加入 shell 启动文件。保留解压目录里的 `skills/filet` 供 Agent 使用。二进制不需要 Rust/Node.js；launchd 生成器需要 Python 3。预编译包尚无 Apple Developer ID 签名或公证。可查看[完整下载说明](https://github.com/zxdvd/filet/blob/main/docs/artifacts.md)，然后从本指南第 2 节继续。
 
 **从源码安装：** 如果需要自行编译，按以下步骤操作。
 
