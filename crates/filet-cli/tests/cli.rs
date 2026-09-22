@@ -62,12 +62,18 @@ impl Drop for Daemon {
         let _ = self.0.wait();
     }
 }
-fn wait(mut check: impl FnMut() -> bool) {
+fn wait(daemon: &mut Daemon, log: &std::path::Path, phase: &str, mut check: impl FnMut() -> bool) {
     let start = Instant::now();
     while !check() {
         assert!(
+            daemon.0.try_wait().unwrap().is_none(),
+            "daemon exited while {phase}: {}",
+            fs::read_to_string(log).unwrap_or_default()
+        );
+        assert!(
             start.elapsed() < Duration::from_secs(8),
-            "condition timed out"
+            "timed out while {phase}: {}",
+            fs::read_to_string(log).unwrap_or_default()
         );
         std::thread::sleep(Duration::from_millis(40));
     }
@@ -77,14 +83,16 @@ fn real_daemon_preserves_baseline_holds_lock_and_rejects_invalid_reload() {
     let f = Fixture::new();
     fs::write(f.root.join("inbox/existing.pdf"), b"old").unwrap();
     let mut cmd = f.command();
-    let _daemon = Daemon(
+    let log_path = f.root.join("daemon.log");
+    let log = fs::File::create(&log_path).unwrap();
+    let mut daemon = Daemon(
         cmd.arg("daemon")
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
+            .stdout(Stdio::from(log.try_clone().unwrap()))
+            .stderr(Stdio::from(log))
             .spawn()
             .unwrap(),
     );
-    wait(|| {
+    wait(&mut daemon, &log_path, "waiting for baseline", || {
         let (ok, s) = f.run(&["status"]);
         ok && s["data"]["sources"][0]["status"] == "available"
     });
@@ -96,7 +104,9 @@ fn real_daemon_preserves_baseline_holds_lock_and_rejects_invalid_reload() {
     fs::write(f.root.join("filet.yaml"), "schemaVersion: 999").unwrap();
     std::thread::sleep(Duration::from_millis(2200));
     fs::write(f.root.join("inbox/new.pdf"), b"new").unwrap();
-    wait(|| f.root.join("archive/new.pdf").exists());
+    wait(&mut daemon, &log_path, "waiting for file move", || {
+        f.root.join("archive/new.pdf").exists()
+    });
     assert!(f.root.join("inbox/existing.pdf").exists());
 }
 #[test]
@@ -106,4 +116,27 @@ fn schema_does_not_require_a_config() {
     let (ok, s) = f.run(&["schema"]);
     assert!(ok);
     assert_eq!(s["data"]["configuration"]["title"], "Config");
+}
+
+#[test]
+fn concurrent_first_status_requests_initialize_one_database() {
+    for _ in 0..8 {
+        let f = Fixture::new();
+        let gate = std::sync::Barrier::new(8);
+        std::thread::scope(|scope| {
+            let workers: Vec<_> = (0..8)
+                .map(|_| {
+                    scope.spawn(|| {
+                        gate.wait();
+                        let (ok, result) = f.run(&["status"]);
+                        assert!(ok, "concurrent database startup: {result}");
+                        assert_eq!(result["data"]["databaseVersion"], 1);
+                    })
+                })
+                .collect();
+            for worker in workers {
+                worker.join().unwrap();
+            }
+        });
+    }
 }

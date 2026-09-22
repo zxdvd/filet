@@ -5,6 +5,7 @@ use serde_json::{Value, json};
 use std::{
     fs::{self, File, OpenOptions},
     path::{Path, PathBuf},
+    time::{Duration, Instant},
 };
 
 pub struct ExecutionLock {
@@ -41,14 +42,44 @@ impl Store {
         fs::create_dir_all(dir)?;
         let db = dir.join("state.sqlite3");
         paths::reject_links(&db)?;
-        let conn = Connection::open(&db)?;
-        conn.busy_timeout(std::time::Duration::from_secs(5))?;
-        let v: u32 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+        let timeout = Duration::from_secs(5);
+        let deadline = Instant::now() + timeout;
+        let (conn, v) = loop {
+            // Concurrent first opens can fail the WAL transition immediately,
+            // without invoking SQLite's busy handler. Drop that connection and
+            // retry only idempotent initialization, within the startup budget.
+            match Self::initialize(&db, deadline.saturating_duration_since(Instant::now())) {
+                Ok(initialized) => break initialized,
+                Err(error)
+                    if error.sqlite_error_code() == Some(rusqlite::ErrorCode::DatabaseBusy)
+                        && Instant::now() < deadline =>
+                {
+                    std::thread::sleep(
+                        Duration::from_millis(10)
+                            .min(deadline.saturating_duration_since(Instant::now())),
+                    );
+                }
+                Err(error) => return Err(error.into()),
+            }
+        };
         if v > 1 {
             return Err(Error::new(
                 "STATE_VERSION",
                 "database is newer than this application",
             ));
+        }
+        conn.busy_timeout(timeout)?;
+        Ok(Self {
+            conn,
+            dir: dir.to_path_buf(),
+        })
+    }
+    fn initialize(db: &Path, timeout: Duration) -> rusqlite::Result<(Connection, u32)> {
+        let conn = Connection::open(db)?;
+        conn.busy_timeout(timeout)?;
+        let v: u32 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+        if v > 1 {
+            return Ok((conn, v));
         }
         conn.execute_batch("PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA foreign_keys=ON;
           CREATE TABLE IF NOT EXISTS sources (id TEXT PRIMARY KEY, signature TEXT NOT NULL, initialized INTEGER NOT NULL DEFAULT 0, status TEXT NOT NULL, last_scan TEXT, revision TEXT NOT NULL);
@@ -59,10 +90,7 @@ impl Store {
           CREATE INDEX IF NOT EXISTS jobs_input ON jobs(input_key,revision);
           CREATE INDEX IF NOT EXISTS jobs_resource ON jobs(resource,status);
           PRAGMA user_version=1;")?;
-        Ok(Self {
-            conn,
-            dir: dir.to_path_buf(),
-        })
+        Ok((conn, v))
     }
     pub fn save(&self, p: &Plan) -> Result<()> {
         let tx = self.conn.unchecked_transaction()?;
