@@ -108,10 +108,10 @@ pub fn run(action: &Action, path: &Path) -> Result<serde_json::Value> {
         .stderr(Stdio::piped());
     // Windows needs SystemRoot for normal system DLL/program initialization. Nothing else is inherited.
     #[cfg(windows)]
-    if !env.keys().any(|k| k.eq_ignore_ascii_case("SystemRoot")) {
-        if let Some(v) = std::env::var_os("SystemRoot") {
-            cmd.env("SystemRoot", v);
-        }
+    if !env.keys().any(|k| k.eq_ignore_ascii_case("SystemRoot"))
+        && let Some(v) = std::env::var_os("SystemRoot")
+    {
+        cmd.env("SystemRoot", v);
     }
     for a in args {
         match a {

@@ -323,16 +323,29 @@ fn initial_baseline_restart_and_missed_events() {
 #[test]
 fn scheduled_scan_reconsiders_unchanged_no_match() {
     let f = Fixture::with_rule(
-        json!({"id":"aged","on":{"type":"scan","source":"inbox","every":"1ms"},"when":{"modifiedOlderThan":"30ms"},"actions":[{"move":{"to":"archive"}}]}),
+        json!({"id":"aged","on":{"type":"scan","source":"inbox","every":"1ms"},"when":{"modifiedOlderThan":"30s"},"actions":[{"move":{"to":"archive"}}]}),
     );
     let input = f.file();
+    let now =
+        chrono::DateTime::<chrono::Utc>::from(fs::metadata(&input).unwrap().modified().unwrap());
     let mut engine = Engine::new();
-    engine.tick(&f.store, &f.config, &NoScripts).unwrap();
+    engine
+        .tick_at(&f.store, &f.config, &NoScripts, now)
+        .unwrap();
     std::thread::sleep(Duration::from_millis(4));
-    engine.tick(&f.store, &f.config, &NoScripts).unwrap();
+    engine
+        .tick_at(&f.store, &f.config, &NoScripts, now)
+        .unwrap();
     assert!(input.exists());
-    std::thread::sleep(Duration::from_millis(35));
-    engine.tick(&f.store, &f.config, &NoScripts).unwrap();
+    std::thread::sleep(Duration::from_millis(4));
+    engine
+        .tick_at(
+            &f.store,
+            &f.config,
+            &NoScripts,
+            now + chrono::TimeDelta::seconds(60),
+        )
+        .unwrap();
     assert!(!input.exists());
 }
 #[test]

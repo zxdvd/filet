@@ -228,6 +228,18 @@ pub fn plan(
     reason: &str,
     due: Option<&BTreeSet<String>>,
 ) -> Result<Option<Plan>> {
+    plan_at(config, js, path, reason, due, Utc::now())
+}
+
+/// Evaluate using a fixed logical clock, including deterministic age-condition fixtures.
+pub fn plan_at(
+    config: &Loaded,
+    js: &dyn ScriptEvaluator,
+    path: &Path,
+    reason: &str,
+    due: Option<&BTreeSet<String>>,
+    now: DateTime<Utc>,
+) -> Result<Option<Plan>> {
     let path = paths::expand(
         &std::env::current_dir()?,
         path.to_str()
@@ -251,7 +263,7 @@ pub fn plan(
         return Ok(None);
     }
     let snap = snapshot::take(&path)?;
-    let ctx = snapshot::context(&snap, reason, Utc::now())?;
+    let ctx = snapshot::context(&snap, reason, now)?;
     for r in config
         .config
         .rules

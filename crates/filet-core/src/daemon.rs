@@ -18,6 +18,7 @@ struct Scan {
     due: BTreeSet<String>,
     initial: bool,
     failed: bool,
+    evaluation_time: chrono::DateTime<chrono::Utc>,
 }
 pub struct Engine {
     scans: BTreeMap<String, Scan>,
@@ -46,6 +47,16 @@ impl Engine {
         store: &Store,
         config: &Loaded,
         js: &dyn ScriptEvaluator,
+    ) -> Result<Vec<serde_json::Value>> {
+        self.tick_at(store, config, js, chrono::Utc::now())
+    }
+    /// The scheduler uses monotonic time; rule evaluation can use a fixed clock for fixtures.
+    pub fn tick_at(
+        &mut self,
+        store: &Store,
+        config: &Loaded,
+        js: &dyn ScriptEvaluator,
+        evaluation_time: chrono::DateTime<chrono::Utc>,
     ) -> Result<Vec<serde_json::Value>> {
         let mut events = Vec::new();
         for (source, root) in &config.roots {
@@ -107,6 +118,7 @@ impl Engine {
                         due,
                         initial,
                         failed: false,
+                        evaluation_time,
                     },
                 );
             }
@@ -129,7 +141,7 @@ impl Engine {
                     continue;
                 }
                 let path = entry.into_path();
-                match observe(store, config, js, source, &path, scan.initial, &scan.due) {
+                match observe(store, config, js, source, &path, scan) {
                     Ok(Some(v)) => events.push(v),
                     Ok(None) => {}
                     Err(e) => {
@@ -185,9 +197,10 @@ fn observe(
     js: &dyn ScriptEvaluator,
     source: &str,
     path: &PathBuf,
-    initial: bool,
-    due: &BTreeSet<String>,
+    scan: &Scan,
 ) -> Result<Option<serde_json::Value>> {
+    let initial = scan.initial;
+    let due = &scan.due;
     let src = &config.config.sources[source];
     if planner::ignored(src, &config.roots[source], path)? {
         return Ok(None);
@@ -242,7 +255,7 @@ fn observe(
         return Ok(None);
     }
     let reason = if scheduled { "scheduled" } else { "reconcile" };
-    let planned = planner::plan(config, js, path, reason, Some(due));
+    let planned = planner::plan_at(config, js, path, reason, Some(due), scan.evaluation_time);
     let result = match planned {
         Ok(Some(plan)) => {
             store.save(&plan)?;
