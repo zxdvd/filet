@@ -1,30 +1,87 @@
-name: Build release candidates
+name: Build artifacts
 on:
+  push:
+    branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: artifacts-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   build:
+    name: ${{ matrix.artifact }}
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-24.04
             artifact: filet-linux-x64
-            binary: target/release/filet
+            target: x86_64-unknown-linux-gnu
+            binary: filet
           - os: macos-14
             artifact: filet-macos-arm64
-            binary: target/release/filet
+            target: aarch64-apple-darwin
+            binary: filet
+          - os: macos-15-intel
+            artifact: filet-macos-x64
+            target: x86_64-apple-darwin
+            binary: filet
           - os: windows-2022
             artifact: filet-windows-x64
-            binary: target/release/filet.exe
+            target: x86_64-pc-windows-msvc
+            binary: filet.exe
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
-      - run: rustup toolchain install 1.94.0 --profile minimal
-      - run: cargo test --workspace --locked
-      - run: cargo build --release --locked --bin filet
-      - uses: actions/upload-artifact@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.94.0 --profile minimal --target ${{ matrix.target }}
+      - name: Test optimized native build
+        run: cargo test --release --workspace --locked --target ${{ matrix.target }}
+      - name: Build binary
+        run: cargo build --release --locked --bin filet --target ${{ matrix.target }}
+      - name: Check release binary
+        env:
+          FILET_BINARY: target/${{ matrix.target }}/release/${{ matrix.binary }}
+        run: |
+          "$FILET_BINARY" --version
+          "$FILET_BINARY" check -c examples/yaml/filet.yaml --json
+          "$FILET_BINARY" check -c examples/js/filet.yaml --json
+          "$FILET_BINARY" test -c examples/yaml/filet.yaml examples/yaml/fixtures.json --json
+      - name: Package binary, skill and examples
+        run: >-
+          python scripts/package_artifact.py
+          --binary target/${{ matrix.target }}/release/${{ matrix.binary }}
+          --target ${{ matrix.target }}
+          --revision "$GITHUB_SHA"
+          --output-dir dist
+      - name: Verify extracted distribution
+        run: >-
+          python scripts/verify_artifact.py
+          --directory dist
+          --target ${{ matrix.target }}
+          --revision "$GITHUB_SHA"
+      - name: Upload downloadable package
+        id: upload
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: ${{ matrix.binary }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+      - name: Add download link to run summary
+        env:
+          ARTIFACT_NAME: ${{ matrix.artifact }}
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+        run: |
+          printf '### %s\n\n[Download package](%s) — commit `%s`\n' \
+            "$ARTIFACT_NAME" "$ARTIFACT_URL" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"

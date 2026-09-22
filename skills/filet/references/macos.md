@@ -2,9 +2,24 @@
 
 目录：[安装](#1-安装) · [首次验证](#2-建立独立的示例配置) · [后台运行](#4-登录后自动运行) · [日常管理](#5-日常管理) · [排错](#6-常见问题)
 
-Filet 自带前台 `daemon`，负责监听、稳定性检查、补扫、计划执行和规则热加载。使用用户级 LaunchAgent 可让它在登录后启动、退出后重新拉起；注销后不会继续运行。不需要 root 或 `sudo`。这是实验版，当前采用源码安装；仓库没有 Homebrew formula 或正式发布的 macOS 安装包。现有 macOS CI 验证的是 Apple Silicon，Intel Mac 原生构建尚未单独验证。
+Filet 自带前台 `daemon`，负责监听、稳定性检查、补扫、计划执行和规则热加载。使用用户级 LaunchAgent 可让它在登录后启动、退出后重新拉起；注销后不会继续运行。不需要 root 或 `sudo`。这是实验版，提供 Apple Silicon 和 Intel 的 CI 预编译包，也可以从源码安装；仓库没有 Homebrew formula。
 
 ## 1. 安装
+
+**优先使用预编译包：** 打开 [Build artifacts](https://github.com/zxdvd/filet/actions/workflows/release.yml)，选择成功构建，在 **Artifacts** 下载 `filet-macos-arm64`（Apple Silicon）或 `filet-macos-x64`（Intel）。需要登录 GitHub。解开下载的外层 ZIP 后，检查 `SHA256SUMS`，再解开内部 tar.gz。以 Apple Silicon 为例，在下载解压后的目录运行：
+
+```sh
+shasum -a 256 -c SHA256SUMS
+tar -xzf filet-macos-arm64.tar.gz
+mkdir -p "$HOME/.local/bin"
+install -m 755 filet-macos-arm64/filet "$HOME/.local/bin/filet"
+export PATH="$HOME/.local/bin:$PATH"
+filet --version
+```
+
+Intel 使用 `filet-macos-x64` 替换上述文件名和目录名。按需将 PATH 设置加入 shell 启动文件。保留解压目录里的 `skills/filet` 供 Agent 使用。二进制不需要 Rust/Node.js；launchd 生成器需要 Python 3。CI 包尚无 Apple Developer ID 签名或公证。可查看[完整下载说明](https://github.com/zxdvd/filet/blob/main/docs/artifacts.md)，然后从本指南第 2 节继续。
+
+**从源码安装：** 如果需要自行编译，按以下步骤操作。
 
 先检查 `xcode-select -p`、`rustup --version` 和 `python3 --version`。缺少 Apple 命令行工具时运行以下命令，并等待安装界面完成：
 
@@ -169,7 +184,7 @@ launchctl bootout "gui/$(id -u)/dev.filet.daemon"
 launchctl bootstrap "gui/$(id -u)" "$HOME/Library/LaunchAgents/dev.filet.daemon.plist"
 ```
 
-升级程序：先停止服务，在 checkout 中运行 `git pull --ff-only` 和 `cargo install --locked --path crates/filet-cli --force`，再执行 `check`、`doctor` 并恢复服务。保留状态目录。替换程序不会让已运行的进程自动升级。
+升级程序：先停止服务，下载并校验新的 CI 包、替换原安装路径的二进制；源码安装则在 checkout 中运行 `git pull --ff-only` 和 `cargo install --locked --path crates/filet-cli --force`。再执行 `check`、`doctor` 并恢复服务。保留状态目录。替换程序不会让已运行的进程自动升级。
 
 修改规则：先在隔离目录验证，再将完整配置发布到原路径。daemon 约每两秒检查配置和 JS 包变化；无效配置会被拒绝，旧的有效配置继续运行。改变 source 配置会创建新基线；只改规则不会自动重放已观察到的 `file.ready` 文件。需要精确控制启用时间时先停止服务。
 
