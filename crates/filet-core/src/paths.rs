@@ -7,7 +7,30 @@ use std::{
 pub fn expand(base: &Path, value: &str) -> Result<PathBuf> {
     let clean = expand_lexical(base, value)?;
     reject_links(&clean)?;
-    Ok(clean)
+    // Use one native representation for existing ancestors. In particular, Windows
+    // canonical/verbatim paths and ordinary drive paths must compare as the same source.
+    // Preserve nonexistent target components; planning must not create directories.
+    let mut ancestor = clean.clone();
+    let mut tail = Vec::new();
+    loop {
+        match fs::canonicalize(&ancestor) {
+            Ok(mut path) => {
+                for name in tail.into_iter().rev() {
+                    path.push(name);
+                }
+                return Ok(path);
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                let name = ancestor
+                    .file_name()
+                    .ok_or_else(|| Error::new("INVALID_PATH", "path has no accessible root"))?
+                    .to_os_string();
+                tail.push(name);
+                ancestor.pop();
+            }
+            Err(e) => return Err(e.into()),
+        }
+    }
 }
 fn expand_lexical(base: &Path, value: &str) -> Result<PathBuf> {
     let p = if value == "~" || value.starts_with("~/") || value.starts_with("~\\") {
