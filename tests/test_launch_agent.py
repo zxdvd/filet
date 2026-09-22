@@ -9,7 +9,7 @@ import tempfile
 import unittest
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / "skills/filet/scripts/launch_agent.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "scripts/launch_agent.py"
 
 
 class LaunchAgentTests(unittest.TestCase):

@@ -6,11 +6,11 @@ Local file automation you can inspect before it runs. Simple rules use YAML; com
 
 **Download:** [GitHub Releases](https://github.com/zxdvd/filet/releases/latest) provide macOS Apple Silicon, Linux x64, and Windows x64 packages with the binary, skill, and examples. Release attachments have no automatic expiry. [Development builds](https://github.com/zxdvd/filet/actions/workflows/release.yml) are also available. See [download and installation instructions](docs/artifacts.md). Rust is only required to build from source.
 
-**macOS:** follow the [installation and launchd guide (中文)](skills/filet/references/macos.md) to install, validate a workflow, and run at login. `filet daemon` is a foreground process; launchd provides background supervision.
+**macOS:** follow the [installation and launchd guide (中文)](docs/macos.md) to install, validate a workflow, and run at login. `filet daemon` is a foreground process; launchd provides background supervision.
 
-**Agent setup:** the repository includes a portable [Filet skill](skills/filet/SKILL.md) covering YAML, JavaScript, plan validation, operation, and recovery. Ask your local agent to read that file, or copy the entire `skills/filet` folder into the skill directory supported by your agent. The reference files and plist generator travel with it. For example:
+**Agent setup:** the repository includes a portable [Filet skill](skills/filet/SKILL.md) for configuring an installed Filet with YAML and JavaScript rules. Ask your local agent to read that file, or copy the entire `skills/filet` folder into the skill directory supported by your agent. For example:
 
-> Read `skills/filet/SKILL.md` in this checkout. Install Filet on my Mac, verify a disposable PDF archive workflow, and configure it to run at login. Use `~/.config/filet/filet.yaml` and `~/Library/Application Support/filet/state`. Report the final rules, validation results, and service status.
+> Filet is installed. Read `skills/filet/SKILL.md` and configure my Inbox to archive PDFs by month. Use JavaScript if needed, and show me the resulting plans.
 
 ## Build
 

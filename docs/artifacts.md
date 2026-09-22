@@ -37,7 +37,7 @@ Add `export PATH="$HOME/.local/bin:$PATH"` to your shell startup file if that di
 
 The executable needs neither Rust nor Node.js installed. The optional launchd plist generator needs Python 3. These binaries have no Developer ID signing or Apple notarization; if macOS blocks one, inspect the source/run and use the system's normal approval flow only if you trust the build. Do not disable Gatekeeper globally.
 
-Next follow the [macOS configuration and daemon guide](../skills/filet/references/macos.md#2-建立独立的示例配置). Tell your agent to read the extracted `skills/filet/SKILL.md` and use the extracted `skills/filet/scripts/launch_agent.py` path. Set `--binary` to the installed executable's actual path. Stop an existing daemon before replacing the binary and start it again after validation.
+Next follow the [macOS configuration and daemon guide](macos.md#2-建立独立的示例配置). Tell your agent to read the extracted `skills/filet/SKILL.md` and use the extracted `scripts/launch_agent.py` path. Set `--binary` to the installed executable's actual path. Stop an existing daemon before replacing the binary and start it again after validation.
 
 ## Linux and Windows
 

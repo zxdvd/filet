@@ -18,7 +18,7 @@ TARGETS = {
     "aarch64-apple-darwin": "filet-macos-arm64",
     "x86_64-pc-windows-msvc": "filet-windows-x64",
 }
-RESOURCES = ("README.md", "docs", "examples", "schemas", "types", "skills/filet")
+RESOURCES = ("README.md", "docs", "examples", "schemas", "types", "skills/filet", "scripts/launch_agent.py")
 
 
 def sha256(path):

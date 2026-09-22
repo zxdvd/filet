@@ -46,7 +46,7 @@ filet --version
 
 仓库会选择 `rust-toolchain.toml` 固定的 Rust 版本。默认二进制在 `~/.cargo/bin/filet`；自定义了 `CARGO_HOME` 或安装根目录时，以 `command -v filet` 为准。新终端找不到命令时，运行 `. "$HOME/.cargo/env"`。QuickJS 和 SQLite 编译进二进制，运行不需要 Node.js。下面的 plist 生成工具额外需要 Python 3 标准库；先确认 `python3 --version` 可用。
 
-让本机 Agent 读取克隆目录里的 `skills/filet/SKILL.md`。若你的 Agent 支持技能目录，可按它的安装约定复制整个 `skills/filet` 文件夹，保留 `references` 和 `scripts`。直接读取文件也能使用，不要求先安装 ChatGPT 插件。
+让本机 Agent 读取克隆目录里的 `skills/filet/SKILL.md`。若你的 Agent 支持技能目录，可按它的安装约定复制整个 `skills/filet` 文件夹，保留 `references`。直接读取文件也能使用，不要求先安装 ChatGPT 插件。
 
 ## 2. 建立独立的示例配置
 
@@ -128,7 +128,7 @@ filet daemon -c "$FILET_CONFIG" --data-dir "$FILET_STATE"
 
 ## 4. 登录后自动运行
 
-确认示例已通过、当前配置适合持续自动执行后，在**本机已登录用户的终端**操作。下面假设 checkout 位于 `~/src/filet`；如果使用复制安装的 skill，改成该 skill 的 `scripts/launch_agent.py` 路径。
+确认示例已通过、当前配置适合持续自动执行后，在**本机已登录用户的终端**操作。下面假设 checkout 位于 `~/src/filet`；如果使用预编译包，改成解压目录里的 `scripts/launch_agent.py` 路径。
 
 先生成并检查 plist。生成器只输出文件内容，不创建目录、不安装服务，也不启动 daemon。路径中的空格和 XML 特殊字符会被正确处理。
 
@@ -136,7 +136,7 @@ filet daemon -c "$FILET_CONFIG" --data-dir "$FILET_STATE"
 mkdir -p "$HOME/Library/LaunchAgents" "$HOME/Library/Logs/filet"
 mkdir -p "$HOME/Library/Application Support/filet/state"
 filet check -c "$FILET_CONFIG" --data-dir "$FILET_STATE" --json &&
-python3 "$HOME/src/filet/skills/filet/scripts/launch_agent.py" \
+python3 "$HOME/src/filet/scripts/launch_agent.py" \
   --binary "$(command -v filet)" \
   --config "$FILET_CONFIG" \
   --data-dir "$FILET_STATE" \

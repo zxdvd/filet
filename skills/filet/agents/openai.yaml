@@ -1,4 +1,4 @@
 interface:
   display_name: "Filet"
-  short_description: "Configure Filet rules, JavaScript, and macOS daemon"
-  default_prompt: "Use $filet to install Filet, configure my file rules, and verify their plans before enabling the daemon."
+  short_description: "Write Filet YAML and JavaScript rules"
+  default_prompt: "Use $filet to configure my installed Filet with YAML or JavaScript rules and preview the results."
