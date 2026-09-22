@@ -1,0 +1,30 @@
+name: Build release candidates
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            artifact: filet-linux-x64
+            binary: target/release/filet
+          - os: macos-14
+            artifact: filet-macos-arm64
+            binary: target/release/filet
+          - os: windows-2022
+            artifact: filet-windows-x64
+            binary: target/release/filet.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install 1.94.0 --profile minimal
+      - run: cargo test --workspace --locked
+      - run: cargo build --release --locked --bin filet
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.binary }}

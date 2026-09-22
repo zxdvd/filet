@@ -1,0 +1,16 @@
+schemaVersion: 1
+sources:
+  inbox:
+    path: ./inbox
+rules:
+  - id: archive-old-pdfs
+    on:
+      type: scan
+      source: inbox
+      every: "1h"
+    when:
+      extension: pdf
+      modifiedOlderThan: "30d"
+    actions:
+      - move:
+          to: ./old-pdfs

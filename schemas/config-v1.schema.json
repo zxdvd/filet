@@ -1,0 +1,403 @@
+{
+  "$defs": {
+    "Arg": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "$ref": "#/$defs/PathArg"
+        }
+      ]
+    },
+    "Condition": {
+      "additionalProperties": false,
+      "properties": {
+        "all": {
+          "items": {
+            "$ref": "#/$defs/Condition"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "any": {
+          "items": {
+            "$ref": "#/$defs/Condition"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "createdOlderThan": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "extension": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "maxSizeBytes": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "minSizeBytes": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "modifiedOlderThan": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nameGlob": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "not": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Condition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "Conflict": {
+      "enum": [
+        "error",
+        "skip"
+      ],
+      "type": "string"
+    },
+    "Draft": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "copy": {
+              "$ref": "#/$defs/Transfer"
+            }
+          },
+          "required": [
+            "copy"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "move": {
+              "$ref": "#/$defs/Transfer"
+            }
+          },
+          "required": [
+            "move"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "rename": {
+              "$ref": "#/$defs/Rename"
+            }
+          },
+          "required": [
+            "rename"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "exec": {
+              "$ref": "#/$defs/Exec"
+            }
+          },
+          "required": [
+            "exec"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "Exec": {
+      "additionalProperties": false,
+      "properties": {
+        "args": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Arg"
+          },
+          "type": "array"
+        },
+        "cwd": {
+          "default": null,
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "description": "Start from an empty environment. These explicit values are the complete child environment.",
+          "type": "object"
+        },
+        "program": {
+          "type": "string"
+        },
+        "timeout": {
+          "default": "30s",
+          "type": "string"
+        }
+      },
+      "required": [
+        "program"
+      ],
+      "type": "object"
+    },
+    "PathArg": {
+      "additionalProperties": false,
+      "properties": {
+        "pathOf": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "pathOf"
+      ],
+      "type": "object"
+    },
+    "Ready": {
+      "additionalProperties": false,
+      "properties": {
+        "retryFor": {
+          "default": "10m",
+          "type": "string"
+        },
+        "stableFor": {
+          "default": "3s",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "Rename": {
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "default": "input",
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "onConflict": {
+          "$ref": "#/$defs/Conflict",
+          "default": "error"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "type": "object"
+    },
+    "Rule": {
+      "additionalProperties": false,
+      "properties": {
+        "actions": {
+          "items": {
+            "$ref": "#/$defs/Draft"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "id": {
+          "type": "string"
+        },
+        "on": {
+          "$ref": "#/$defs/Trigger"
+        },
+        "script": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Script"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "when": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Condition"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "on"
+      ],
+      "type": "object"
+    },
+    "Script": {
+      "additionalProperties": false,
+      "properties": {
+        "apiVersion": {
+          "format": "uint32",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "file": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "file",
+        "apiVersion"
+      ],
+      "type": "object"
+    },
+    "Source": {
+      "additionalProperties": false,
+      "properties": {
+        "ignore": {
+          "default": [
+            "**/*.crdownload",
+            "**/*.part",
+            "**/*.tmp",
+            "**/.filet-*"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "path": {
+          "type": "string"
+        },
+        "ready": {
+          "$ref": "#/$defs/Ready",
+          "default": {
+            "retryFor": "10m",
+            "stableFor": "3s"
+          }
+        },
+        "reconcileEvery": {
+          "default": "10m",
+          "type": "string"
+        },
+        "recursive": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "type": "object"
+    },
+    "Transfer": {
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "default": "input",
+          "type": "string"
+        },
+        "onConflict": {
+          "$ref": "#/$defs/Conflict",
+          "default": "error"
+        },
+        "to": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "to"
+      ],
+      "type": "object"
+    },
+    "Trigger": {
+      "additionalProperties": false,
+      "properties": {
+        "every": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "source"
+      ],
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "rules": {
+      "items": {
+        "$ref": "#/$defs/Rule"
+      },
+      "type": "array"
+    },
+    "schemaVersion": {
+      "format": "uint32",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "sources": {
+      "additionalProperties": {
+        "$ref": "#/$defs/Source"
+      },
+      "type": "object"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "sources",
+    "rules"
+  ],
+  "title": "Config",
+  "type": "object"
+}

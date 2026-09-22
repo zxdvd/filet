@@ -1,0 +1,4 @@
+[
+  {"path": "inbox/sample.pdf", "expectedRule": "archive-pdfs", "expectedActionCount": 2},
+  {"path": "inbox/sample.txt", "expectedRule": null, "expectedActionCount": 0}
+]

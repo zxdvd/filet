@@ -1,0 +1,23 @@
+schemaVersion: 1
+sources:
+  inbox:
+    path: ./inbox
+    recursive: false
+    ready:
+      stableFor: "3s"
+      retryFor: "10m"
+    reconcileEvery: "10m"
+rules:
+  - id: archive-pdfs
+    on:
+      type: file.ready
+      source: inbox
+    when:
+      extension: pdf
+    actions:
+      - copy:
+          to: ./backup
+          onConflict: error
+      - move:
+          to: ./archive
+          onConflict: error

@@ -1,0 +1,5 @@
+/target/
+/.filet/
+*.sqlite3*
+*.lockfile
+.DS_Store

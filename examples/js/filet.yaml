@@ -1,0 +1,12 @@
+schemaVersion: 1
+sources:
+  inbox:
+    path: ./inbox
+rules:
+  - id: archive-pdfs
+    on:
+      type: file.ready
+      source: inbox
+    script:
+      file: ./rules/archive.mjs
+      apiVersion: 1
