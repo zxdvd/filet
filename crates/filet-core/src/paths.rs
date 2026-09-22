@@ -38,6 +38,11 @@ pub fn reject_links(path: &Path) -> Result<()> {
     let mut p = PathBuf::new();
     for c in path.components() {
         p.push(c.as_os_str());
+        // A Windows drive/verbatim/UNC prefix is not a filesystem entry on its own.
+        // Inspect the completed root after RootDir is appended, then every descendant.
+        if matches!(c, Component::Prefix(_)) {
+            continue;
+        }
         match fs::symlink_metadata(&p) {
             Ok(m) => {
                 #[cfg(windows)]
@@ -55,7 +60,12 @@ pub fn reject_links(path: &Path) -> Result<()> {
                 }
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
-            Err(e) => return Err(e.into()),
+            Err(e) => {
+                return Err(Error::new(
+                    "IO_ERROR",
+                    format!("cannot inspect {}: {e}", p.display()),
+                ));
+            }
         }
     }
     Ok(())
